@@ -5,8 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-
-	"github.com/ilyakaznacheev/cleanenv"
 )
 
 type DiscordConfigType struct {
@@ -45,9 +43,14 @@ func init() {
 func initEnv() {
 	configPath = os.Getenv("SACHIBOTGO_CONFIGPATH")
 	createConfigFile(configPath)
-	err := cleanenv.ReadConfig(configPath, &Config)
+	file, err := os.Open(configPath)
 	if err != nil {
 		fmt.Println("Cannot open config.json:", err)
+		panic(err)
+	}
+	err = json.NewDecoder(file).Decode(&Config)
+	if err != nil {
+		fmt.Println("Cannot decode config.json:", err)
 		panic(err)
 	}
 }
@@ -68,14 +71,24 @@ func (c *ConfigType) Save() error {
 	return err
 }
 
-func createConfigFile(path string) (file *os.File, err error) {
+func createConfigFile(path string) (err error) {
 	_, err = os.Stat(path)
 	if errors.Is(err, os.ErrNotExist) {
-		file, err = os.Create(path)
+		file, err := os.Create(path)
 		if err != nil {
-			return file, fmt.Errorf("cannot create config.json: %w", err)
+			return fmt.Errorf("cannot create config.json: %w", err)
+		}
+		enc := json.NewEncoder(file)
+		enc.SetIndent("", "    ")
+		err = enc.Encode(ConfigType{
+			Discord: DiscordConfigType{
+				Token:  "Bot TOKEN",
+				Guilds: []string{"123", "456"},
+			},
+		})
+		if err != nil {
+			return fmt.Errorf("cannot write default config.json: %w", err)
 		}
 	}
-	err = json.NewEncoder(file).Encode(nil)
 	return
 }
