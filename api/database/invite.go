@@ -9,15 +9,19 @@ import (
 )
 
 type PotentialInvite struct {
-	UserID          string `gorm:"primarykey"`
-	InviterID       string
-	UpdaterID       string
-	InviteMessageID string
-	InviteStatus    InviteStatus `gorm:"embedded;embeddedPrefix:status_"`
-	CreatedAt       time.Time
-	UpdatedAt       time.Time
+	UserID           string `gorm:"primarykey"`
+	InviterID        string
+	UpdaterID        string
+	InviteMessageID  string
+	InviteStatusName string
+	InviteCode       string
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
 }
 
+func (invite *PotentialInvite) InviteStatus() InviteStatus {
+	return InviteStatusesMap[invite.InviteStatusName]
+}
 func (invite *PotentialInvite) User(ds *discordgo.Session) (user *discordgo.User, err error) {
 	user, err = ds.User(invite.UserID)
 	return
@@ -63,7 +67,7 @@ var InviteStatuses = struct {
 	Paused   InviteStatus
 }{
 	Invited: InviteStatus{
-		"invited",
+		"Invited",
 		0xFFFF00,
 		"Invited",
 	},
@@ -73,28 +77,38 @@ var InviteStatuses = struct {
 		"Suggested by {user}",
 	},
 	Approved: InviteStatus{
-		"approved",
+		"Approved",
 		0x17820e,
 		"Approved by {user}",
 	},
 	Accepted: InviteStatus{
-		"accepted",
+		"Accepted",
 		0x1bc912,
 		"Accepted invitation",
 	},
 	Rejected: InviteStatus{
-		"rejected",
+		"Rejected",
 		0xa01116,
 		"Rejected by {user}",
 	},
 	Declined: InviteStatus{
-		"declined",
+		"Declined",
 		0xd81d1a,
 		"Declined invitation",
 	},
 	Paused: InviteStatus{
-		"paused",
+		"Paused",
 		0x444444,
 		"Paused by {user}",
 	},
+}
+
+var InviteStatusesMap = map[string]InviteStatus{
+	"Invited":  InviteStatuses.Invited,
+	"Active":   InviteStatuses.Active,
+	"Approved": InviteStatuses.Approved,
+	"Accepted": InviteStatuses.Accepted,
+	"Rejected": InviteStatuses.Rejected,
+	"Declined": InviteStatuses.Declined,
+	"Paused":   InviteStatuses.Paused,
 }

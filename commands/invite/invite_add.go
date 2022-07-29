@@ -4,9 +4,9 @@ import (
 	"fmt"
 
 	"github.com/bwmarrin/discordgo"
-	"github.com/smallpepperz/sachibotgo/api"
 	"github.com/smallpepperz/sachibotgo/api/config"
 	"github.com/smallpepperz/sachibotgo/api/database"
+	"github.com/smallpepperz/sachibotgo/api/errors"
 )
 
 type InviteCommandAdd struct{}
@@ -31,7 +31,7 @@ func (*InviteCommandAdd) RunCommand(ds *discordgo.Session, i *discordgo.Interact
 	user := i.ApplicationCommandData().Options[0].Options[0].UserValue(ds)
 
 	if entry, _ := database.GetPotentialInvite(user.ID); entry != nil {
-		api.RespondWithError(ds, i, fmt.Errorf("%s is already in the invite system", user.Username))
+		errors.HandleError(ds, i, fmt.Errorf("%s is already in the invite system", user.Username))
 		return
 	}
 
@@ -39,21 +39,21 @@ func (*InviteCommandAdd) RunCommand(ds *discordgo.Session, i *discordgo.Interact
 	message, err := ds.ChannelMessageSendEmbed(config.InviteChannel, embed)
 
 	if err != nil {
-		api.RespondWithError(ds, i, err)
+		errors.HandleError(ds, i, err)
 		return
 	}
 
 	potentialInvite := database.PotentialInvite{
-		UserID:          user.ID,
-		InviterID:       i.Member.User.ID,
-		UpdaterID:       i.Member.User.ID,
-		InviteMessageID: message.ID,
-		InviteStatus:    database.InviteStatuses.Active,
+		UserID:           user.ID,
+		InviterID:        i.Member.User.ID,
+		UpdaterID:        i.Member.User.ID,
+		InviteMessageID:  message.ID,
+		InviteStatusName: database.InviteStatuses.Active.Name,
 	}
 
 	tx := database.Get().Create(&potentialInvite)
 	if tx.Error != nil {
-		api.RespondWithError(ds, i, tx.Error)
+		errors.HandleError(ds, i, tx.Error)
 	}
 
 	ds.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{

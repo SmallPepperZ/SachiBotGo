@@ -22,7 +22,7 @@ var Session *discordgo.Session
 func main() {
 	Session, _ = discordgo.New(config.Discord.Token)
 	defer Session.Close()
-	
+
 	addHandlers()
 	setApplicationId()
 	commands.AddAllCommands()
