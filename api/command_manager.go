@@ -4,6 +4,8 @@ import (
 	"fmt"
 
 	"github.com/bwmarrin/discordgo"
+	"github.com/go-errors/errors"
+	"github.com/smallpepperz/sachibotgo/api/config"
 	"github.com/smallpepperz/sachibotgo/api/logger"
 )
 
@@ -29,6 +31,7 @@ func GetLoadedCommands() map[string]Command {
 func GetAvailableCommands() map[string]Command {
 	return availableCommands
 }
+
 /*
 	A command to be registered with the bot.
 */
@@ -40,9 +43,8 @@ type Command interface {
 	Name() string
 }
 
-
 func CreateGlobalCommand(ds *discordgo.Session, command *discordgo.ApplicationCommand, cmdFunction func(ds *discordgo.Session, i *discordgo.InteractionCreate)) []error {
-	return CreateCommand(ds, Config.Discord.Guilds, command, cmdFunction)
+	return CreateCommand(ds, config.Discord.Guilds, command, cmdFunction)
 }
 
 func RegisterCommand(ds *discordgo.Session, guilds []string, command *discordgo.ApplicationCommand) (errs []error) {
@@ -62,6 +64,11 @@ func RegisterCommand(ds *discordgo.Session, guilds []string, command *discordgo.
 func CreateCommand(ds *discordgo.Session, guilds []string, command *discordgo.ApplicationCommand, cmdFunction func(ds *discordgo.Session, i *discordgo.InteractionCreate)) (errs []error) {
 	errs = RegisterCommand(ds, guilds, command)
 	ds.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+		defer func() {
+			if err := recover(); err != nil {
+				logger.Err().Println("RECOVER: Command '"+i.ApplicationCommandData().Name+"' errored!\n", errors.Wrap(err, 2).ErrorStack())
+			}
+		}()
 		switch i.Type {
 		case discordgo.InteractionApplicationCommand:
 			{
@@ -70,6 +77,8 @@ func CreateCommand(ds *discordgo.Session, guilds []string, command *discordgo.Ap
 				}
 			}
 		}
+
 	})
+
 	return
 }

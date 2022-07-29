@@ -12,15 +12,18 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/smallpepperz/sachibotgo/api"
+	"github.com/smallpepperz/sachibotgo/api/config"
+	"github.com/smallpepperz/sachibotgo/api/logger"
 	"github.com/smallpepperz/sachibotgo/commands"
 )
 
 var Session *discordgo.Session
 
 func main() {
-	Session, _ = discordgo.New(api.Config.Discord.Token)
+	Session, _ = discordgo.New(config.Discord.Token)
 	defer Session.Close()
-
+	
+	addHandlers()
 	setApplicationId()
 	commands.AddAllCommands()
 	api.LoadCommands(Session, []string{"all"})
@@ -32,14 +35,33 @@ func main() {
 		fmt.Println(err.Error())
 		os.Exit(1)
 	}
-	setStatus()
+
 	setUptime()
 
 	fmt.Println(`Now running. Press CTRL-C to exit.`)
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
 	<-sc
+	fmt.Println("Removing commands")
+
+	unregisterCommands()
+
 	fmt.Println("Shutting down")
+}
+
+func unregisterCommands() {
+	for _, guild := range config.Discord.Guilds {
+		registeredCommands, err := Session.ApplicationCommands(Session.State.User.ID, guild)
+		if err != nil {
+			logger.Err().Printf("Could not fetch registered commands: %v", err)
+		}
+		for _, v := range registeredCommands {
+			err := Session.ApplicationCommandDelete(Session.State.User.ID, guild, v.ID)
+			if err != nil {
+				logger.Err().Printf("Cannot delete '%v' command: %v", v.Name, err)
+			}
+		}
+	}
 }
 
 func setStatus() {
@@ -65,7 +87,7 @@ func setApplicationId() {
 		Method: "GET",
 		URL:    u,
 		Header: map[string][]string{
-			"Authorization": {api.Config.Discord.Token},
+			"Authorization": {config.Discord.Token},
 		},
 	}
 
@@ -82,4 +104,14 @@ func setApplicationId() {
 
 func setUptime() {
 	api.Globals.StartTime = time.Now()
+}
+
+func addHandlers() {
+	Session.AddHandler(func(s *discordgo.Session, r *discordgo.Ready) {
+		logger.Out().Printf("Logged in as: %v#%v", s.State.User.Username, s.State.User.Discriminator)
+		setStatus()
+	})
+	Session.AddHandler(func(s *discordgo.Session, r *discordgo.Resumed) {
+		setStatus()
+	})
 }

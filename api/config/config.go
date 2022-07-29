@@ -1,4 +1,4 @@
-package api
+package config
 
 import (
 	"encoding/json"
@@ -25,16 +25,17 @@ func (a *DiscordConfigType) Equal(b *DiscordConfigType) bool {
 	return equal
 }
 
-type ConfigType struct {
-	Discord DiscordConfigType `json:"discord"`
+type configType struct {
+	Discord       DiscordConfigType `json:"discord"`
+	DBPath        string            `json:"db_path"`
+	InviteChannel string            `json:"invite_channel"`
 }
 
-func (a *ConfigType) Equal(b *ConfigType) bool {
-	return a.Discord.Equal(&b.Discord)
-}
-
-var Config ConfigType
+var configData configType
 var configPath string
+var Discord DiscordConfigType
+var DBPath string
+var InviteChannel string
 
 func init() {
 	initEnv()
@@ -48,13 +49,16 @@ func initEnv() {
 		fmt.Println("Cannot open config.json:", err)
 		panic(err)
 	}
-	err = json.NewDecoder(file).Decode(&Config)
+	err = json.NewDecoder(file).Decode(&configData)
 	if err != nil {
 		fmt.Println("Cannot decode config.json:", err)
 		panic(err)
 	}
+	Discord = configData.Discord
+	DBPath = configData.DBPath
+	InviteChannel = configData.InviteChannel
 }
-func (c *ConfigType) Save() error {
+func (c *configType) Save() error {
 	file, err := os.OpenFile(configPath, os.O_WRONLY, os.ModeAppend)
 	file.Truncate(0)
 	if err != nil {
@@ -80,11 +84,12 @@ func createConfigFile(path string) (err error) {
 		}
 		enc := json.NewEncoder(file)
 		enc.SetIndent("", "    ")
-		err = enc.Encode(ConfigType{
+		err = enc.Encode(configType{
 			Discord: DiscordConfigType{
 				Token:  "Bot TOKEN",
 				Guilds: []string{"123", "456"},
 			},
+			DBPath: "/path/to/sqlite.db",
 		})
 		if err != nil {
 			return fmt.Errorf("cannot write default config.json: %w", err)
