@@ -30,12 +30,12 @@ func (*InviteCommandLink) GetOptions(ds *discordgo.Session) *discordgo.Applicati
 func (*InviteCommandLink) RunCommand(ds *discordgo.Session, i *discordgo.InteractionCreate) {
 	user, err := ds.User(i.ApplicationCommandData().Options[0].Options[0].StringValue())
 	if err != nil {
-		errors.HandleError(ds, i, err)
+		errors.HandleException(ds, i, err)
 		return
 	}
 	potentialInvite, err := database.GetPotentialInvite(user.ID)
 	if err != nil {
-		errors.HandleError(ds, i, err)
+		errors.HandleException(ds, i, err)
 		return
 	}
 	var invite *discordgo.Invite
@@ -48,7 +48,7 @@ func (*InviteCommandLink) RunCommand(ds *discordgo.Session, i *discordgo.Interac
 		invite, err = createInvite(ds, i)
 	}
 	if err != nil {
-		errors.HandleError(ds, i, err)
+		errors.HandleException(ds, i, err)
 		return
 	}
 

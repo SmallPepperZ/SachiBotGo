@@ -45,7 +45,7 @@ func dispatchCommand(ds *discordgo.Session, i *discordgo.InteractionCreate) {
 		switch options[0].Name {
 		case "add":
 		default:
-			errors.HandleError(ds, i, errors.NewErrorMissingPermission("manage roles"))
+			errors.HandleException(ds, i, errors.NewErrorMissingPermission("manage roles"))
 			return
 		}
 	}
@@ -114,7 +114,7 @@ func generateEmbed(user *discordgo.User, updater *discordgo.User, inviter *disco
 
 func getUsers(ds *discordgo.Session) []*discordgo.ApplicationCommandOptionChoice {
 	users := make([]*database.PotentialInvite, 0)
-	database.Get().Not(database.PotentialInvite{InviteStatusName: "Accepted"}).Not(database.PotentialInvite{InviteStatusName: "Declined"}).Find(&users)
+	database.Get().Find(&users)
 
 	userOptions := make([]*discordgo.ApplicationCommandOptionChoice, 0, len(users))
 	for _, user := range users {

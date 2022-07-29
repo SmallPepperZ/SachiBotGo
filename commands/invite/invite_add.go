@@ -7,6 +7,7 @@ import (
 	"github.com/smallpepperz/sachibotgo/api/config"
 	"github.com/smallpepperz/sachibotgo/api/database"
 	"github.com/smallpepperz/sachibotgo/api/errors"
+	"github.com/smallpepperz/sachibotgo/api/logger"
 )
 
 type InviteCommandAdd struct{}
@@ -30,16 +31,18 @@ func (*InviteCommandAdd) GetOptions() *discordgo.ApplicationCommandOption {
 func (*InviteCommandAdd) RunCommand(ds *discordgo.Session, i *discordgo.InteractionCreate) {
 	user := i.ApplicationCommandData().Options[0].Options[0].UserValue(ds)
 
-	if entry, _ := database.GetPotentialInvite(user.ID); entry != nil {
-		errors.HandleError(ds, i, fmt.Errorf("%s is already in the invite system", user.Username))
+	if _, err := database.GetPotentialInvite(user.ID); err == nil {
+		errors.HandleException(ds, i, fmt.Errorf("%s is already in the invite system", user.Username))
 		return
+	} else {
+		logger.Out().Println("Ignore error")
 	}
 
 	embed := generateEmbed(user, i.Member.User, i.Member.User, database.InviteStatuses.Active)
 	message, err := ds.ChannelMessageSendEmbed(config.InviteChannel, embed)
 
 	if err != nil {
-		errors.HandleError(ds, i, err)
+		errors.HandleException(ds, i, err)
 		return
 	}
 
@@ -53,13 +56,20 @@ func (*InviteCommandAdd) RunCommand(ds *discordgo.Session, i *discordgo.Interact
 
 	tx := database.Get().Create(&potentialInvite)
 	if tx.Error != nil {
-		errors.HandleError(ds, i, tx.Error)
+		errors.HandleException(ds, i, tx.Error)
+	}
+
+	thread, err := ds.MessageThreadStart(message.ChannelID, message.ID, user.Username, 10080)
+
+	if err != nil {
+		errors.HandleException(ds, i, err)
+		return
 	}
 
 	ds.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{
-			Content: fmt.Sprint("Added ", user.Username, " to the invite system"),
+			Content: fmt.Sprint("Added ", user.Username, " to the invite system\nThread at ", thread.Mention()),
 			Flags:   uint64(discordgo.MessageFlagsEphemeral),
 		},
 	})

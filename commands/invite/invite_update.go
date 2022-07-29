@@ -59,7 +59,7 @@ func (*InviteCommandUpdate) RunCommand(ds *discordgo.Session, i *discordgo.Inter
 		case "user":
 			user, err = ds.User(value.StringValue())
 			if err != nil {
-				errors.HandleError(ds, i, fmt.Errorf("could not find user '%s'", value.StringValue()))
+				errors.HandleException(ds, i, fmt.Errorf("could not find user '%s'", value.StringValue()))
 				return
 			}
 		case "status":
@@ -100,6 +100,6 @@ func sendResponse(ds *discordgo.Session, i *discordgo.InteractionCreate, respons
 		},
 	})
 	if err != nil {
-		errors.HandleError(ds, i, err)
+		errors.HandleException(ds, i, err)
 	}
 }
